@@ -1,26 +1,33 @@
 """
-Update these names AFTER you upload your fine-tuned models to Hugging Face.
-Replace YOUR_HF_USERNAME with your real Hugging Face username.
+Model settings for the Streamlit app.
+Hugging Face username: sajida12
 """
 
-# Your Hugging Face username (example: sajida12-sys)
 HF_USERNAME = "sajida12"
 
-# Fine-tuned model repos on YOUR Hugging Face account
+# Your fine-tuned model repos (create these after training + upload)
 BERT_MODEL_ID = f"{HF_USERNAME}/bert-ner-mbert"
 GPT_MODEL_ID = f"{HF_USERNAME}/gpt2-balochi"
 
-# Temporary public models so the app can run BEFORE you finish fine-tuning.
-# After upload, set USE_FINETUNED = True
-USE_FINETUNED = False
-
+# Working public models used automatically if fine-tuned repos are not ready yet
 FALLBACK_BERT_MODEL = "Davlan/bert-base-multilingual-cased-ner-hrl"
 FALLBACK_GPT_MODEL = "gpt2"
 
 
+def resolve_model_id(preferred: str, fallback: str) -> str:
+    """Use your HF model if it exists; otherwise use the public fallback."""
+    try:
+        from huggingface_hub import model_info
+
+        model_info(preferred)
+        return preferred
+    except Exception:
+        return fallback
+
+
 def get_bert_model_id() -> str:
-    return BERT_MODEL_ID if USE_FINETUNED else FALLBACK_BERT_MODEL
+    return resolve_model_id(BERT_MODEL_ID, FALLBACK_BERT_MODEL)
 
 
 def get_gpt_model_id() -> str:
-    return GPT_MODEL_ID if USE_FINETUNED else FALLBACK_GPT_MODEL
+    return resolve_model_id(GPT_MODEL_ID, FALLBACK_GPT_MODEL)

@@ -53,9 +53,12 @@ python upload_models.py
 ```
 
 ### 5) Connect models to the app
-Edit `config.py`:
-1. Set `HF_USERNAME = "your_hf_username"`
-2. Set `USE_FINETUNED = True`
+`config.py` already uses Hugging Face username `sajida12`.
+After you upload fine-tuned models, the app will automatically load:
+- `sajida12/bert-ner-mbert`
+- `sajida12/gpt2-balochi`
+
+Until those repos exist, it safely uses public fallback models (no warning banner).
 
 ### 6) Test app on your computer
 ```bash

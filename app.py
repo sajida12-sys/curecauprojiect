@@ -7,7 +7,7 @@ One Streamlit app with two sections:
 import streamlit as st
 from transformers import pipeline
 
-from config import get_bert_model_id, get_gpt_model_id, USE_FINETUNED
+from config import get_bert_model_id, get_gpt_model_id
 
 
 st.set_page_config(
@@ -21,13 +21,6 @@ st.caption(
     "Section 1: BERT multilingual NER (encoder-only) · "
     "Section 2: GPT Balochi generation (decoder-only)"
 )
-
-if not USE_FINETUNED:
-    st.info(
-        "Currently using temporary public models. "
-        "After you fine-tune and upload to Hugging Face, "
-        "set USE_FINETUNED = True in config.py"
-    )
 
 
 @st.cache_resource
@@ -60,7 +53,9 @@ with tab_bert:
         "Task: **Named Entity Recognition** — find Person, Location, Organization. "
         "This is text understanding, not sentiment analysis."
     )
-    st.write(f"Model: `{get_bert_model_id()}`")
+
+    bert_model_id = get_bert_model_id()
+    st.write(f"Model: `{bert_model_id}`")
 
     bert_text = st.text_area(
         "Enter a short sentence (English or another high-resource language):",
@@ -74,7 +69,7 @@ with tab_bert:
             st.warning("Please type a sentence first.")
         else:
             with st.spinner("Loading / running BERT..."):
-                ner = load_bert_ner(get_bert_model_id())
+                ner = load_bert_ner(bert_model_id)
                 results = ner(bert_text)
 
             if not results:
@@ -99,7 +94,9 @@ with tab_gpt:
         "Task: **Balochi text generation / Q&A** (low-resource, monolingual). "
         "Use Balochi script only — not Urdu or other languages."
     )
-    st.write(f"Model: `{get_gpt_model_id()}`")
+
+    gpt_model_id = get_gpt_model_id()
+    st.write(f"Model: `{gpt_model_id}`")
 
     gpt_prompt = st.text_area(
         "Enter a short Balochi prompt / question:",
@@ -114,7 +111,7 @@ with tab_gpt:
             st.warning("Please type a Balochi prompt first.")
         else:
             with st.spinner("Loading / running GPT..."):
-                gen = load_gpt_generator(get_gpt_model_id())
+                gen = load_gpt_generator(gpt_model_id)
                 out = gen(
                     gpt_prompt,
                     max_new_tokens=max_tokens,
