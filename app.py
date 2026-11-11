@@ -113,12 +113,17 @@ with tab_gpt:
     chosen = st.selectbox(
         "Try a ready Balochi test question:",
         options=["(type your own)"] + test_qs,
+        key="balochi_select",
     )
 
-    default_q = "" if chosen == "(type your own)" else chosen
+    # Keep text box in sync when user picks a ready question
+    if chosen != "(type your own)":
+        st.session_state["gpt_input"] = chosen
+    elif "gpt_input" not in st.session_state:
+        st.session_state["gpt_input"] = "سلام علیکم، تئی نام چے انت؟"
+
     gpt_prompt = st.text_area(
         "Enter a Balochi question:",
-        value=default_q or "سلام علیکم، تئی نام چے انت؟",
         height=120,
         key="gpt_input",
     )
@@ -130,22 +135,25 @@ with tab_gpt:
         max_tokens = st.slider("Max new tokens", 20, 150, 60)
 
     if st.button("Get Balochi Answer", type="primary", key="gpt_btn"):
-        if not gpt_prompt.strip():
+        question = gpt_prompt.strip()
+        # If a ready question is selected, always use that exact text
+        if chosen != "(type your own)":
+            question = chosen.strip()
+
+        if not question:
             st.warning("Please type a Balochi question first.")
         else:
             with st.spinner("Matching question to Balochi dataset..."):
-                result = answer_balochi_question(gpt_prompt, df)
+                result = answer_balochi_question(question, df)
 
             st.markdown("### Correct answer (based on matched question)")
-            if result["confident"]:
+            if result["answer"]:
                 st.success(result["answer"])
             else:
-                st.warning(
-                    "Low match confidence — showing closest dataset answer. "
-                    "Try one of the ready test questions."
-                )
-                st.write(result["answer"])
+                st.error("No answer found. Please try another Balochi question.")
 
+            st.markdown("**Your question:**")
+            st.write(question)
             st.markdown("**Matched dataset question:**")
             st.write(result["matched_question"])
             st.caption(f"Match score: {result['score']}")
@@ -159,7 +167,7 @@ with tab_gpt:
             if show_gpt:
                 with st.spinner("Running GPT-2 generation..."):
                     prompt = (
-                        f"سوال: {gpt_prompt.strip()}\n"
+                        f"سوال: {question}\n"
                         f"جواب: {result['answer'][:120]}\n"
                     )
                     gen = load_gpt_generator(gpt_model_id)

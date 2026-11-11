@@ -146,12 +146,15 @@ def answer_balochi_question(user_question: str, df: pd.DataFrame | None = None, 
         for s, qq, aa in scored[:top_k]
     ]
 
-    # If match is very weak, still return best but mark low confidence
+    # Exact / near-exact normalized match gets full confidence
+    if _normalize(q) == _normalize(best_q):
+        best_score = 1.0
+
     return {
         "matched_question": best_q,
         "answer": best_a,
         "score": round(best_score, 3),
-        "confident": best_score >= 0.35,
+        "confident": best_score >= 0.20,
         "top_matches": top,
     }
 
