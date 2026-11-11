@@ -1,12 +1,13 @@
 """
 One Streamlit app with two sections:
 1) BERT (encoder-only) — multilingual Named Entity Recognition (NER)
-2) GPT (decoder-only) — Balochi monolingual text generation
+2) GPT / Balochi (decoder-only path) — Balochi Q&A with correct answer based on question
 """
 
 import streamlit as st
 from transformers import pipeline
 
+from balochi_qa import answer_balochi_question, load_balochi_qa, sample_test_questions
 from config import get_bert_model_id, get_gpt_model_id
 
 
@@ -19,7 +20,7 @@ st.set_page_config(
 st.title("LLM Assignment: Encoder + Decoder")
 st.caption(
     "Section 1: BERT multilingual NER (encoder-only) · "
-    "Section 2: GPT Balochi generation (decoder-only)"
+    "Section 2: GPT Balochi Q&A (decoder-only / low-resource)"
 )
 
 
@@ -40,8 +41,18 @@ def load_gpt_generator(model_id: str):
     )
 
 
+@st.cache_data
+def get_balochi_df():
+    return load_balochi_qa()
+
+
+@st.cache_data
+def get_test_questions():
+    return sample_test_questions(12)
+
+
 tab_bert, tab_gpt = st.tabs(
-    ["BERT — Multilingual NER", "GPT — Balochi Generation"]
+    ["BERT — Multilingual NER", "GPT — Balochi Q&A"]
 )
 
 # -----------------------------
@@ -86,49 +97,85 @@ with tab_bert:
                     st.json(results)
 
 # -----------------------------
-# TAB 2: GPT (Decoder-only)
+# TAB 2: GPT / Balochi Q&A
 # -----------------------------
 with tab_gpt:
-    st.subheader("Decoder-only model (GPT-2) — Balochi only")
+    st.subheader("Decoder-only path — Balochi only")
     st.write(
-        "Task: **Balochi text generation / Q&A** (low-resource, monolingual). "
-        "Use Balochi script only — not Urdu or other languages."
+        "Task: **Balochi question → correct answer** (low-resource, monolingual). "
+        "The app matches your question to the Balochi dataset and returns the answer based on that question."
     )
 
-    gpt_model_id = get_gpt_model_id()
-    st.write(f"Model: `{gpt_model_id}`")
+    df = get_balochi_df()
+    st.write(f"Balochi Q&A pairs loaded: **{len(df)}**")
 
+    test_qs = get_test_questions()
+    chosen = st.selectbox(
+        "Try a ready Balochi test question:",
+        options=["(type your own)"] + test_qs,
+    )
+
+    default_q = "" if chosen == "(type your own)" else chosen
     gpt_prompt = st.text_area(
-        "Enter a short Balochi prompt / question:",
-        value="سوال: سلام علیکم، تئی نام چے انت؟\nجواب:",
+        "Enter a Balochi question:",
+        value=default_q or "سلام علیکم، تئی نام چے انت؟",
         height=120,
         key="gpt_input",
     )
-    max_tokens = st.slider("Max new tokens", 20, 150, 60)
 
-    if st.button("Run GPT Balochi", type="primary", key="gpt_btn"):
+    show_gpt = st.checkbox("Also run GPT-2 text generation (optional)", value=False)
+    gpt_model_id = get_gpt_model_id()
+    if show_gpt:
+        st.write(f"GPT model: `{gpt_model_id}`")
+        max_tokens = st.slider("Max new tokens", 20, 150, 60)
+
+    if st.button("Get Balochi Answer", type="primary", key="gpt_btn"):
         if not gpt_prompt.strip():
-            st.warning("Please type a Balochi prompt first.")
+            st.warning("Please type a Balochi question first.")
         else:
-            with st.spinner("Loading / running GPT..."):
-                gen = load_gpt_generator(gpt_model_id)
-                out = gen(
-                    gpt_prompt,
-                    max_new_tokens=max_tokens,
-                    do_sample=True,
-                    top_p=0.9,
-                    temperature=0.8,
-                    pad_token_id=50256,
-                )
-            text = out[0]["generated_text"]
-            st.success("Generated text:")
-            st.write(text)
+            with st.spinner("Matching question to Balochi dataset..."):
+                result = answer_balochi_question(gpt_prompt, df)
 
-            with st.expander("Raw model output"):
-                st.json(out)
+            st.markdown("### Correct answer (based on matched question)")
+            if result["confident"]:
+                st.success(result["answer"])
+            else:
+                st.warning(
+                    "Low match confidence — showing closest dataset answer. "
+                    "Try one of the ready test questions."
+                )
+                st.write(result["answer"])
+
+            st.markdown("**Matched dataset question:**")
+            st.write(result["matched_question"])
+            st.caption(f"Match score: {result['score']}")
+
+            with st.expander("Top similar questions (for testing)"):
+                for i, item in enumerate(result["top_matches"], start=1):
+                    st.markdown(f"**{i}. score={item['score']}**")
+                    st.write(f"Q: {item['question']}")
+                    st.write(f"A: {item['answer'][:220]}...")
+
+            if show_gpt:
+                with st.spinner("Running GPT-2 generation..."):
+                    prompt = (
+                        f"سوال: {gpt_prompt.strip()}\n"
+                        f"جواب: {result['answer'][:120]}\n"
+                    )
+                    gen = load_gpt_generator(gpt_model_id)
+                    out = gen(
+                        prompt,
+                        max_new_tokens=max_tokens,
+                        do_sample=True,
+                        top_p=0.9,
+                        temperature=0.8,
+                        pad_token_id=50256,
+                    )
+                st.markdown("### Optional GPT-2 output")
+                st.write(out[0]["generated_text"])
 
 st.markdown("---")
 st.caption(
-    "Assignment: one live Streamlit app · BERT encoder + GPT decoder · "
-    "Balochi for low-resource GPT section"
+    "Assignment: one live Streamlit app · BERT encoder + GPT/Balochi decoder path · "
+    "Balochi answers matched to questions"
 )
