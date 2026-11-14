@@ -1,14 +1,15 @@
 """
-Push this Streamlit app to your Hugging Face account as a Docker Space.
+Push project cards/repos to Hugging Face account: sajida12
 
-Prerequisites:
-1) Create a Write token: https://huggingface.co/settings/tokens
-2) Login once:
-     hf auth login
-   or PowerShell:
-     $env:HF_TOKEN="hf_xxx"   # do NOT put token in any project file
-3) Run:
-     python push_to_hf.py
+Notes:
+- HF free tier: Static Spaces are free.
+- Streamlit/Docker/Gradio Spaces on free CPU now require Hugging Face PRO.
+- This script creates/updates:
+  1) Static Space: sajida12/balochi-gpt-test
+  2) Model repos: sajida12/bert-ner-mbert , sajida12/gpt2-balochi
+
+For the interactive Streamlit app, deploy from GitHub:
+https://share.streamlit.io  →  sajida12-sys/curecauprojiect  → app.py
 """
 
 from __future__ import annotations
@@ -18,18 +19,10 @@ from pathlib import Path
 
 from huggingface_hub import HfApi, login, whoami
 
-SPACE_NAME = os.getenv("HF_SPACE_NAME", "bert-gpt-balochi-app")
 HF_USERNAME = os.getenv("HF_USERNAME", "sajida12")
-
-INCLUDE = [
-    "app.py",
-    "config.py",
-    "balochi_qa.py",
-    "requirements.txt",
-    "README.md",
-    "Dockerfile",
-    "data/balochi_instructions.csv",
-]
+SPACE_ID = f"{HF_USERNAME}/balochi-gpt-test"
+BERT_ID = f"{HF_USERNAME}/bert-ner-mbert"
+GPT_ID = f"{HF_USERNAME}/gpt2-balochi"
 
 
 def main():
@@ -37,50 +30,51 @@ def main():
     if token:
         login(token=token, add_to_git_credential=False)
 
-    try:
-        info = whoami()
-    except Exception as exc:
-        raise SystemExit(
-            "Not logged in to Hugging Face.\n"
-            "Run this in PowerShell first:\n"
-            "  hf auth login\n"
-            "or set HF_TOKEN, then run again.\n"
-            f"Details: {exc}"
-        ) from exc
-
+    info = whoami()
     username = info.get("name") or HF_USERNAME
-    repo_id = f"{username}/{SPACE_NAME}"
-    api = HfApi(token=token)
+    api = HfApi()
+    root = Path(__file__).resolve().parent
 
     print(f"Logged in as: {username}")
-    print(f"Creating/updating Space: {repo_id}")
 
-    # HF create_repo currently accepts: gradio | docker | static
+    # Free static Space (Streamlit SDK is no longer available via API)
     api.create_repo(
-        repo_id=repo_id,
+        repo_id=SPACE_ID,
         repo_type="space",
-        space_sdk="docker",
+        space_sdk="static",
         private=False,
         exist_ok=True,
     )
+    api.upload_file(
+        path_or_fileobj=str(root / "hf_static" / "index.html"),
+        path_in_repo="index.html",
+        repo_id=SPACE_ID,
+        repo_type="space",
+    )
+    api.upload_file(
+        path_or_fileobj=str(root / "README.md"),
+        path_in_repo="README.md",
+        repo_id=SPACE_ID,
+        repo_type="space",
+    )
+    print(f"Space ready: https://huggingface.co/spaces/{SPACE_ID}")
 
-    root = Path(__file__).resolve().parent
-    for rel in INCLUDE:
-        path = root / rel
-        if not path.exists():
-            print(f"Skip missing: {rel}")
-            continue
-        print(f"Upload: {rel}")
+    # Model repos + cards
+    for repo_id, readme in [
+        (BERT_ID, root / "model_cards" / "bert-ner-mbert-README.md"),
+        (GPT_ID, root / "model_cards" / "gpt2-balochi-README.md"),
+    ]:
+        api.create_repo(repo_id=repo_id, repo_type="model", private=False, exist_ok=True)
         api.upload_file(
-            path_or_fileobj=str(path),
-            path_in_repo=rel.replace("\\", "/"),
+            path_or_fileobj=str(readme),
+            path_in_repo="README.md",
             repo_id=repo_id,
-            repo_type="space",
+            repo_type="model",
         )
+        print(f"Model ready: https://huggingface.co/{repo_id}")
 
-    url = f"https://huggingface.co/spaces/{repo_id}"
-    print("\nDone.")
-    print(f"Open your Hugging Face Space: {url}")
+    print("\nInteractive app: deploy GitHub repo on Streamlit Cloud.")
+    print("https://github.com/sajida12-sys/curecauprojiect")
 
 
 if __name__ == "__main__":

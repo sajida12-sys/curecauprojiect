@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BERT + GPT Balochi Assignment</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent2: #34d399;
+    }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at top left, #1d4ed855, transparent 40%),
+        radial-gradient(circle at bottom right, #05966944, transparent 35%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+    h1 { font-size: 2.2rem; margin-bottom: 0.4rem; }
+    p { line-height: 1.6; color: var(--muted); }
+    .card {
+      background: var(--card);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 20px 22px;
+      margin-top: 18px;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    a:hover { text-decoration: underline; }
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #0ea5e922;
+      color: var(--accent2);
+      font-size: 0.85rem;
+      margin-right: 8px;
+    }
+    ul { color: var(--muted); line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="tag">Hugging Face · sajida12</div>
+    <div class="tag">University assignment</div>
+    <h1>BERT + GPT Balochi App</h1>
+    <p>
+      One project with two sections: multilingual BERT (encoder-only NER)
+      and Balochi GPT/Q&amp;A (decoder-only, low-resource, monolingual).
+    </p>
+
+    <div class="card">
+      <h2>Live / Source</h2>
+      <ul>
+        <li>GitHub repo:
+          <a href="https://github.com/sajida12-sys/curecauprojiect" target="_blank">
+            sajida12-sys/curecauprojiect
+          </a>
+        </li>
+        <li>BERT model repo:
+          <a href="https://huggingface.co/sajida12/bert-ner-mbert" target="_blank">
+            sajida12/bert-ner-mbert
+          </a>
+        </li>
+        <li>GPT Balochi model repo:
+          <a href="https://huggingface.co/sajida12/gpt2-balochi" target="_blank">
+            sajida12/gpt2-balochi
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>What each section does</h2>
+      <ul>
+        <li><strong>BERT</strong>: Named Entity Recognition (Person / Location / Organization). Not sentiment.</li>
+        <li><strong>GPT / Balochi</strong>: Balochi-only question answering from the Balochi dataset.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Note about Spaces hosting</h2>
+      <p>
+        Free Hugging Face accounts can host Static Spaces. Running Streamlit/Docker Spaces
+        on free CPU now needs Hugging Face PRO. Use Streamlit Community Cloud with the GitHub repo
+        for the interactive app:
+        <a href="https://share.streamlit.io" target="_blank">share.streamlit.io</a>
+      </p>
+    </div>
+  </main>
+</body>
+</html>
