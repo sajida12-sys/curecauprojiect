@@ -1,9 +1,9 @@
-streamlit>=1.28.0,<1.42.0
-transformers>=4.36.0,<4.50.0
+streamlit
+transformers
 torch
-pandas>=2.0.0
-numpy>=1.24.0
-huggingface_hub>=0.20.0
+pandas
+numpy
+huggingface_hub
 sentencepiece
 protobuf
-accelerate>=0.25.0
+accelerate
