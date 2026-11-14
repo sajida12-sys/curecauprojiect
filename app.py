@@ -8,7 +8,12 @@ import streamlit as st
 from transformers import pipeline
 
 from balochi_qa import answer_balochi_question, load_balochi_qa, sample_test_questions
-from config import get_bert_model_id, get_gpt_model_id
+from config import (
+    FALLBACK_BERT_MODEL,
+    FALLBACK_GPT_MODEL,
+    get_bert_model_id,
+    get_gpt_model_id,
+)
 
 
 st.set_page_config(
@@ -26,19 +31,27 @@ st.caption(
 
 @st.cache_resource
 def load_bert_ner(model_id: str):
-    return pipeline(
-        "ner",
-        model=model_id,
-        aggregation_strategy="simple",
-    )
+    try:
+        return pipeline(
+            "ner",
+            model=model_id,
+            aggregation_strategy="simple",
+        ), model_id
+    except Exception:
+        # README-only or broken custom repo → public working NER model
+        return pipeline(
+            "ner",
+            model=FALLBACK_BERT_MODEL,
+            aggregation_strategy="simple",
+        ), FALLBACK_BERT_MODEL
 
 
 @st.cache_resource
 def load_gpt_generator(model_id: str):
-    return pipeline(
-        "text-generation",
-        model=model_id,
-    )
+    try:
+        return pipeline("text-generation", model=model_id), model_id
+    except Exception:
+        return pipeline("text-generation", model=FALLBACK_GPT_MODEL), FALLBACK_GPT_MODEL
 
 
 @st.cache_data
@@ -66,7 +79,7 @@ with tab_bert:
     )
 
     bert_model_id = get_bert_model_id()
-    st.write(f"Model: `{bert_model_id}`")
+    st.write(f"Preferred model: `{bert_model_id}`")
 
     bert_text = st.text_area(
         "Enter a short sentence (English or another high-resource language):",
@@ -80,9 +93,10 @@ with tab_bert:
             st.warning("Please type a sentence first.")
         else:
             with st.spinner("Loading / running BERT..."):
-                ner = load_bert_ner(bert_model_id)
+                ner, used_model = load_bert_ner(bert_model_id)
                 results = ner(bert_text)
 
+            st.caption(f"Loaded model: `{used_model}`")
             if not results:
                 st.write("No entities found.")
             else:
@@ -131,12 +145,11 @@ with tab_gpt:
     show_gpt = st.checkbox("Also run GPT-2 text generation (optional)", value=False)
     gpt_model_id = get_gpt_model_id()
     if show_gpt:
-        st.write(f"GPT model: `{gpt_model_id}`")
+        st.write(f"Preferred GPT model: `{gpt_model_id}`")
         max_tokens = st.slider("Max new tokens", 20, 150, 60)
 
     if st.button("Get Balochi Answer", type="primary", key="gpt_btn"):
         question = gpt_prompt.strip()
-        # If a ready question is selected, always use that exact text
         if chosen != "(type your own)":
             question = chosen.strip()
 
@@ -170,7 +183,7 @@ with tab_gpt:
                         f"سوال: {question}\n"
                         f"جواب: {result['answer'][:120]}\n"
                     )
-                    gen = load_gpt_generator(gpt_model_id)
+                    gen, used_gpt = load_gpt_generator(gpt_model_id)
                     out = gen(
                         prompt,
                         max_new_tokens=max_tokens,
@@ -180,6 +193,7 @@ with tab_gpt:
                         pad_token_id=50256,
                     )
                 st.markdown("### Optional GPT-2 output")
+                st.caption(f"Loaded model: `{used_gpt}`")
                 st.write(out[0]["generated_text"])
 
 st.markdown("---")
