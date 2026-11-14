@@ -1,5 +1,5 @@
 """
-Push this Streamlit app to your Hugging Face account as a Space.
+Push this Streamlit app to your Hugging Face account as a Docker Space.
 
 Prerequisites:
 1) Create a Write token: https://huggingface.co/settings/tokens
@@ -21,13 +21,13 @@ from huggingface_hub import HfApi, login, whoami
 SPACE_NAME = os.getenv("HF_SPACE_NAME", "bert-gpt-balochi-app")
 HF_USERNAME = os.getenv("HF_USERNAME", "sajida12")
 
-# Files/folders needed for the live Streamlit Space
 INCLUDE = [
     "app.py",
     "config.py",
     "balochi_qa.py",
     "requirements.txt",
     "README.md",
+    "Dockerfile",
     "data/balochi_instructions.csv",
 ]
 
@@ -50,15 +50,16 @@ def main():
 
     username = info.get("name") or HF_USERNAME
     repo_id = f"{username}/{SPACE_NAME}"
-    api = HfApi()
+    api = HfApi(token=token)
 
     print(f"Logged in as: {username}")
     print(f"Creating/updating Space: {repo_id}")
 
+    # HF create_repo currently accepts: gradio | docker | static
     api.create_repo(
         repo_id=repo_id,
         repo_type="space",
-        space_sdk="streamlit",
+        space_sdk="docker",
         private=False,
         exist_ok=True,
     )
